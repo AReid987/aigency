@@ -24,5 +24,7 @@
   "codegraphy.selectedD3Color": "Spectral",
   "codegraphy.selectedNodeColor": "#fff",
   "codegraphy.favoriteNodeColor": "#ffd700",
-  "codegraphy.outlineColor": "#ffd700"
+  "codegraphy.outlineColor": "#ffd700",
+  "traycer.executionMode": "Auto",
+  "traycer.enableCommentsHighlighting": true
 }
