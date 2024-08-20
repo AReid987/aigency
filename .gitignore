@@ -35,5 +35,24 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+Thumbs.db
 
 philosophy.md
+
+# IDE/Editor specific
+.vscode/
+.idea/
+*.iml
+
+# Config files
+config.toml
+
+# Log files
+logs/
+*.log
+
+# Testing
+/coverage/
+
+# Db
+db.sqlite
