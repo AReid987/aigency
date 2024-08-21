@@ -36,39 +36,39 @@ def initialize():
     # embedding model used for memory
     # embedding_llm = models.get_openai_embedding(model_name="text-embedding-3-small")
     embedding_llm = models.get_ollama_embedding(
-        model_name="nomic-embed-text:latest", temp)
+        model_name="nomic-embed-text:latest", temperature=0)
     # embedding_llm = models.get_huggingface_embedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
     # agent configuration
     config = AgentConfig(
-    chat_model=chat_llm,
-    utility_model=utility_llm,
-    embeddings_model=embedding_llm,
-    # memory_subdir = "",
-    auto_memory_count=0,
-    # auto_memory_skip = 2,
-    # rate_limit_seconds = 60,
-    # rate_limit_requests = 30,
-    # rate_limit_input_tokens = 0,
-    # rate_limit_output_tokens = 0,
-    # msgs_keep_max = 25,
-    # msgs_keep_start = 5,
-    # msgs_keep_end = 10,
-    # max_tool_response_length = 3000,
-    # response_timeout_seconds = 60,
-    code_exec_docker_enabled=True,
-    code_exec_docker_name="agent-zero-exe",
-    code_exec_docker_image="frdel/agent-zero-exe:latest",
-    code_exec_docker_ports={"22/tcp": 50022}
-    code_exec_docker_volumes={files.get_abs_path(
-        "work_dir"): {"bind": "/root", "mode": "rw"}}
-    code_exec_ssh_enabled=True,
-    # code_exec_ssh_addr = "localhost",
-    # code_exec_ssh_port = 50022,
-    # code_exec_ssh_user = "root",
-    # code_exec_ssh_pass = "toor",
-    # additional = {},
-)
+        chat_model=chat_llm,
+        utility_model=utility_llm,
+        embeddings_model=embedding_llm,
+        # memory_subdir = "",
+        auto_memory_count=0,
+        # auto_memory_skip = 2,
+        # rate_limit_seconds = 60,
+        # rate_limit_requests = 30,
+        # rate_limit_input_tokens = 0,
+        # rate_limit_output_tokens = 0,
+        # msgs_keep_max = 25,
+        # msgs_keep_start = 5,
+        # msgs_keep_end = 10,
+        # max_tool_response_length = 3000,
+        # response_timeout_seconds = 60,
+        code_exec_docker_enabled=True,
+        code_exec_docker_name="agent-zero-exe",
+        code_exec_docker_image="frdel/agent-zero-exe:latest",
+        code_exec_docker_ports={"22/tcp": 50022},
+        code_exec_docker_volumes={files.get_abs_path(
+            "work_dir"): {"bind": "/root", "mode": "rw"}},
+        code_exec_ssh_enabled=True,
+        # code_exec_ssh_addr = "localhost",
+        # code_exec_ssh_port = 50022,
+        # code_exec_ssh_user = "root",
+        # code_exec_ssh_pass = "toor",
+        # additional = {},
+    )
 
     # create the first agent
     agent0 = Agent(number=0, config=config)
@@ -78,99 +78,103 @@ def initialize():
 
     # Main conversation loop
 
-    def chat(agent: Agent):
+
+def chat(agent: Agent):
 
     # start the conversation loop
     while True:
         # ask user for message
-    with input_lock:
+        with input_lock:
             # how long the agent is willing to wait
-    timeout = agent.get_data("timeout")
-            if not timeout:  # if agent wants to wait for user input forever
-    PrintStyle(background_color="#6C3483", font_color="white",
-                           bold=True, padding=True).print(f"User message ('e' to leave):")
-                           import readline  # this fixes arrow keys in terminal
-                           user_input = input("> ")
-                           PrintStyle(font_color="white", padding=False,
+            timeout = agent.get_data("timeout")
+        if not timeout:  # if agent wants to wait for user input forever
+            PrintStyle(background_color="#6C3483", font_color="white",
+                       bold=True, padding=True).print(f"User message ('e' to leave):")
+            import readline  # this fixes arrow keys in terminal
+            user_input = input("> ")
+            PrintStyle(font_color="white", padding=False,
+                       log_only=True).print(f"> {user_input}")
+
+        else:  # otherwise wait for user input with a timeout
+            PrintStyle(background_color="#6C3483", font_color="white", bold=True, padding=True).print(
+                f"User message ({timeout}s timeout, 'w' to wait, 'e' to leave):")
+            import readline  # this fixes arrow keys in terminal
+            # user_input = timed_input("> ", timeout=timeout)
+            user_input = timeout_input("> ", timeout=timeout)
+
+            if not user_input:
+                user_input = read_file("prompts/fw.msg_timeout.md")
+                PrintStyle(font_color="white", padding=False).stream(
+                    f"{user_input}")
+            else:
+                user_input = user_input.strip()
+            if user_input.lower() == "w":  # the user needs more time
+                user_input = input("> ").strip()
+                PrintStyle(font_color="white", padding=False,
                            log_only=True).print(f"> {user_input}")
 
-                           else:  # otherwise wait for user input with a timeout
-                           PrintStyle(background_color="#6C3483", font_color="white", bold=True, padding=True).print(
-                    f"User message ({timeout}s timeout, 'w' to wait, 'e' to leave):")
-                    import readline  # this fixes arrow keys in terminal
-                    # user_input = timed_input("> ", timeout=timeout)
-                    user_input = timeout_input("> ", timeout=timeout)
+            # exit the conversation when the user types 'exit'
+            if user_input.lower() == 'e':
+                break
 
-                    if not user_input:
-                    user_input= read_file("prompts/fw.msg_timeout.md")
-                    PrintStyle(font_color="white", padding=False).stream(
-                       f"{user_input}")
-                        else:
-                        user_input = user_input.strip()
-                        if user_input.lower() == "w":  # the user needs more time
-                        user_input= input("> ").strip()
-                        PrintStyle(font_color="white", padding=False,
-                               log_only =True).print(f"> {user_input}")
+            # send message to agent0,
+            assistant_response = agent.message_loop(
+                user_input)
 
-                               # exit the conversation when the user types 'exit'
-                               if user_input.lower() == 'e':
-            break
+            # print agent0 response
+            PrintStyle(font_color="white", background_color="#1D8348",
+                       bold=True, padding=True).print(f"{agent.agent_name}: reponse:")
+            PrintStyle(font_color="white").print(f"{assistant_response}")
 
-                                   # send message to agent0,
-                                   assistant_response = agent.message_loop(user_input)
+    # User intervention during agent streaming
 
-                                   # print agent0 response
-                                   PrintStyle(font_color="white", background_color="#1D8348",
-                   bold =True, padding=True).print(f"{agent.agent_name}: reponse:")
-                   PrintStyle(font_color="white").print(f"{assistant_response}")
-
-
-                   # User intervention during agent streaming
-                   def intervention():
-    if Agent.streaming_agent and not Agent.paused:
-        Agent.paused= True  # stop agent streaming
+    def intervention():
+        if Agent.streaming_agent and not Agent.paused:
+            Agent.paused = True  # stop agent streaming
         PrintStyle(background_color="#6C3483", font_color="white", bold=True, padding=True).print(
             f"User intervention ('e' to leave, empty to continue):")
 
-            import readline  # this fixes arrow keys in terminal
-            user_input = input("> ").strip()
-            PrintStyle(font_color="white", padding=False,
-                   log_only =True).print(f"> {user_input}")
+        import readline  # this fixes arrow keys in terminal
+        user_input = input("> ").strip()
+        PrintStyle(font_color="white", padding=False,
+                   log_only=True).print(f"> {user_input}")
 
-                   if user_input.lower() == 'e':
-                   os._exit(0)  # exit the conversation when the user types 'exit'
-                   if user_input:
-                   # set intervention message if non-empty
-                   Agent.streaming_agent.intervention_message = user_input
-                   Agent.paused = False  # continue agent streaming
+        if user_input.lower() == 'e':
+            os._exit(0)  # exit the conversation when the user types 'exit'
+        if user_input:
+            # set intervention message if non-empty
+            Agent.streaming_agent.intervention_message = user_input
+            Agent.paused = False  # continue agent streaming
+
+            # Capture keyboard input to trigger user intervention
 
 
-                   # Capture keyboard input to trigger user intervention
-                   def capture_keys():
+def capture_keys():
     global input_lock
-    intervent= False
+    intervent = False
     while True:
         if intervent:
             intervention()
-        intervent= False
-        time.sleep(0.1)
+            intervent = False
+            time.sleep(0.1)
 
         if Agent.streaming_agent:
             # with raw_input, application_keypad, mouse_input:
             with input_lock, raw_input, application_keypad:
-                event: InputEvent | None= get_input_event(timeout=0.1)
+                event: InputEvent | None = get_input_event(timeout=0.1)
                 if event and (event.shortcut.isalpha() or event.shortcut.isspace()):
-                    intervent= True
-                    continue
+                    intervent = True
 
-                       # User input with timeout
+        continue
+
+    # User input with timeout
 
 
-                       def timeout_input(prompt, timeout=10):
+def timeout_input(prompt, timeout=10):
     return timed_input.timeout_input(prompt=prompt, timeout=timeout)
 
 
-                       if __name__ == "__main__":
+if __name__ == "__main__":
     print("Initializing framework...")
 
     # Start the key capture thread for user intervention during agent streaming
