@@ -1,7 +1,7 @@
 # Aider Configuration File
 
 # Ollama settings
-model: codellama:7b-code
+model: deepseek-coder-v2
 ollama_url: ${OLLAMA_BASE_URL}
 
 # Editor settings

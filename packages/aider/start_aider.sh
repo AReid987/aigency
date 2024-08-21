@@ -19,9 +19,9 @@ mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
 # Start Aider
-exec python -m aider.main \
-	--config /root/.aider.conf.yml \
+exec aider --config /root/.aider.conf.yml \
 	--model deepseek-coder-v2:latest \
 	--ollama-url "$OLLAMA_BASE_URL" \
 	--no-git \
+	--port 5555 \
 	"$@"
